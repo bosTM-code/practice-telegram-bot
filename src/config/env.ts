@@ -10,8 +10,17 @@ function getEnv(name: string): string {
   return value;
 }
 
+function parseAdminIds(value: string): number[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '')
+    .map((item) => Number(item))
+    .filter((item) => !Number.isNaN(item));
+}
+
 export const env = {
   BOT_TOKEN: getEnv('BOT_TOKEN'),
   DATABASE_URL: getEnv('DATABASE_URL'),
-  ADMIN_IDS: getEnv('ADMIN_IDS')
+  ADMIN_IDS: parseAdminIds(getEnv('ADMIN_IDS'))
 };
