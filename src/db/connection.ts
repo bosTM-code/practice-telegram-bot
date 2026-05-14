@@ -50,7 +50,7 @@ export function getAll<T>(sql: string, params: unknown[] = []): Promise<T[]> {
 }
 
 export function initDatabase(): Promise<void> {
-  const sqlPath = path.resolve(__dirname, 'migrations.sql');
+  const sqlPath = path.resolve(process.cwd(), 'src/db/migrations.sql');
   const migrations = fs.readFileSync(sqlPath, 'utf-8');
 
   return new Promise((resolve, reject) => {
