@@ -16,6 +16,5 @@ export function isValidDeadline(value: string): boolean {
 }
 
 export function isValidTaskStatus(value: string): boolean {
-  const allowedStatuses = ['new', 'in_progress', 'done'];
-  return allowedStatuses.includes(value);
+  return ['new', 'in_progress', 'done'].includes(value);
 }
