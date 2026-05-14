@@ -1,4 +1,5 @@
 import { getAll, getOne, runInsert, runQuery } from '../db/connection';
+import { findUserByTelegramId } from './user.service';
 
 export type TaskStatus = 'new' | 'in_progress' | 'done';
 
@@ -54,4 +55,32 @@ export async function getActiveTasks(): Promise<Task[]> {
      WHERE status IN ('new', 'in_progress')
      ORDER BY deadline ASC, id DESC`
   );
+}
+
+export async function changeTaskStatusForUser(
+  telegramId: number,
+  taskId: number,
+  status: 'in_progress' | 'done'
+): Promise<Task> {
+  const user = await findUserByTelegramId(telegramId);
+
+  if (!user) {
+    throw new Error('Користувач не зареєстрований у системі.');
+  }
+
+  const task = await getTaskById(taskId);
+
+  if (!task) {
+    throw new Error('Задачу не знайдено.');
+  }
+
+  await updateTaskStatus(taskId, status);
+
+  const updatedTask = await getTaskById(taskId);
+
+  if (!updatedTask) {
+    throw new Error('Не вдалося оновити статус задачі.');
+  }
+
+  return updatedTask;
 }

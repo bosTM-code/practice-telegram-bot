@@ -3,10 +3,14 @@ import { logEvent } from '../utils/logger';
 import {
   isNonEmptyText,
   isValidFullName,
-  isValidGroupName
+  isValidGroupName,
+  parseTaskStatus
 } from '../utils/validators';
 import { registerUser } from '../services/user.service';
-import { getActiveTasks } from '../services/task.service';
+import {
+  getActiveTasks,
+  changeTaskStatusForUser
+} from '../services/task.service';
 import { saveDailyReport } from '../services/report.service';
 
 function getCommandPayload(text: string, command: string): string {
@@ -23,6 +27,7 @@ export function registerUserCommands(bot: Telegraf<Context>): void {
       '/register ПІБ | Група\n' +
       '/tasks\n' +
       '/report текст звіту\n' +
+      '/taskstatus ID | in_progress або done\n' +
       '/help'
     );
   });
@@ -35,7 +40,7 @@ export function registerUserCommands(bot: Telegraf<Context>): void {
       '/register ПІБ | Група\n' +
       '/tasks — перегляд актуальних задач\n' +
       '/report текст — подання щоденного звіту\n' +
-      '/help — довідка\n' +
+      '/taskstatus ID | in_progress або done — зміна статусу задачі\n' +
       '/myid — показати Telegram ID'
     );
   });
@@ -101,6 +106,65 @@ export function registerUserCommands(bot: Telegraf<Context>): void {
     } catch (error) {
       await logEvent('error', 'Помилка під час /tasks', String(error));
       return ctx.reply('Не вдалося отримати список задач.');
+    }
+  });
+
+  bot.command('taskstatus', async (ctx) => {
+    try {
+      const raw = getCommandPayload(ctx.message.text, '/taskstatus');
+      const parts = raw.split('|').map((item) => item.trim());
+
+      if (parts.length !== 2) {
+        return ctx.reply(
+          'Формат: /taskstatus ID | in_progress\n' +
+          'або /taskstatus ID | done'
+        );
+      }
+
+      const taskId = Number(parts[0]);
+      if (!Number.isInteger(taskId) || taskId <= 0) {
+        return ctx.reply('Вкажіть коректний ID задачі.');
+      }
+
+      const parsedStatus = parseTaskStatus(parts[1]);
+      if (!parsedStatus) {
+        return ctx.reply(
+          'Допустимі статуси: in_progress, done,\n' +
+          'або українською: у процесі, виконано.'
+        );
+      }
+
+      const updatedTask = await changeTaskStatusForUser(
+        ctx.from.id,
+        taskId,
+        parsedStatus
+      );
+
+      const statusLabel =
+        updatedTask.status === 'in_progress' ? 'у процесі' : 'виконано';
+
+      await logEvent(
+        'info',
+        'Користувач змінив статус задачі',
+        `telegram_id=${ctx.from.id}; task_id=${taskId}; status=${updatedTask.status}`
+      );
+
+      return ctx.reply(
+        `Статус задачі #${updatedTask.id} оновлено.\n` +
+        `Новий статус: ${statusLabel}.`
+      );
+    } catch (error) {
+      await logEvent('error', 'Помилка під час /taskstatus', String(error));
+
+      if (String(error).includes('не зареєстрований')) {
+        return ctx.reply('Спочатку виконайте /register.');
+      }
+
+      if (String(error).includes('не знайдено')) {
+        return ctx.reply('Задачу з таким ID не знайдено.');
+      }
+
+      return ctx.reply('Не вдалося змінити статус задачі.');
     }
   });
 
