@@ -55,3 +55,24 @@ export async function getAllReports(): Promise<ReportWithUser[]> {
      ORDER BY reports.report_date DESC, reports.id DESC`
   );
 }
+
+export async function getReportsForExport(): Promise<string[][]> {
+  const reports = await getAllReports();
+
+  const rows: string[][] = [
+    ['ID', 'ПІБ', 'Група', 'Дата звіту', 'Текст звіту', 'Створено']
+  ];
+
+  for (const report of reports) {
+    rows.push([
+      String(report.id),
+      report.full_name,
+      report.group_name,
+      report.report_date,
+      report.text,
+      report.created_at
+    ]);
+  }
+
+  return rows;
+}
